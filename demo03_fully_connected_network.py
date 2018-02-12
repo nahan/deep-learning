@@ -83,6 +83,7 @@ class Layer(object):
         for node in self.nodes:
             print(node)
 
+
 class Connection(object):
     def __init__(self, upstream_node, downstream_node):
         self.upstream_node = upstream_node
@@ -108,6 +109,7 @@ class Connection(object):
             self.downstream_node.node_index,
             self.weight)
 
+
 class Connections(object):
     def __init__(self):
         self.connections = []
@@ -119,5 +121,68 @@ class Connections(object):
         for conn in self.connections:
             print(conn)
 
+
+class Network(object):
+    def __init__(self, layers):
+        self.connections = Connections()
+        self.layers = []
+        layer_count = len(layers)
+        node_count = 0
+        for i in xrange(layer_count):
+            self.layers.append(Layer(i, layers[i]))
+            node_count += (layers[i] + 1)
+        for layer in xrange(layer_count - 1):
+            connections = [Connection(upstream_node, downstream_node)
+                           for upstream_node in self.layers[layer].nodes
+                           for downstream_node in self.layers[layer + 1].nodes[:-1]]
+            for conn in connections:
+                self.connections.add_connection(conn)
+                conn.downstream_node.append_upstream_connection(conn)
+                conn.upstream_node.append_downstream_connection(conn)
+
+    def train(self, labels, data_set, rate, iteration):
+        for i in xrange(iteration):
+            for d in xrange(len(data_set)):
+                self.train_one_sample(labels[d], data_set[d], rate)
+
+    def train_one_sample(self, label, sample, rate):
+        self.predict(sample)
+        self.calc_delta(label)
+        self.update_weight(rate)
+
+    def calc_delta(self, label):
+        output_nodes = self.layers[-1].nodes
+        for i in xrange(len(label)):
+            output_nodes[i].calc_output_layer_delta(label[i])
+        for layer in self.layers[-2::-1]:
+            for node in layer.nodes:
+                node.calc_hidden_layer_delta()
+
+    def update_weight(self, rate):
+        for layer in self.layers[:-1]:
+            for node in layer.nodes:
+                for conn in node.downstream:
+                    conn.update_weight(rate)
+
+    def calc_gradient(self):
+        for layer in self.layers[:-1]:
+            for node in layer.nodes:
+                for conn in node.downstream:
+                    conn.calc_gradient()
+
+    def get_gradient(self, label, sample):
+        self.predict(sample)
+        self.calc_delta(label)
+        self.calc_gradient()
+
+    def predict(self, sample):
+        self.layers[0].set_output(sample)
+        for i in xrange(1, len(self.layers)):
+            self.layers[i].calc_output()
+        return map(lambda node: node.output, self.layers[-1].node[:-1])
+
+    def dump(self):
+        for layer in self.layers:
+            layer.dump()
 
 
