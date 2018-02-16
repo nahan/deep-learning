@@ -1,9 +1,10 @@
-import math
 import random
+import numpy
 
 
 def sigmoid(x):
-    return 1.0 / (1 + math.exp(-x))
+    numpy.seterr(over='ignore')
+    return 1.0 / (1 + numpy.exp(-x))
 
 
 class Node(object):
@@ -179,7 +180,7 @@ class Network(object):
         self.layers[0].set_output(sample)
         for i in xrange(1, len(self.layers)):
             self.layers[i].calc_output()
-        return map(lambda node: node.output, self.layers[-1].node[:-1])
+        return map(lambda node: node.output, self.layers[-1].nodes[:-1])
 
     def dump(self):
         for layer in self.layers:
